@@ -10,32 +10,15 @@ use Illuminate\Support\Facades\Http;
 class AnimalPictureController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Display a random animal picture, and save it to the database.
      */
     public function random()
     {
-        // APIs : https://random-d.uk/api/random
-        //        https://random.dog/woof.json
-        //        https://randomfox.ca/floof/
-
-        if (request()->input('animal')) {
-            switch (request()->input('animal')) {
-                case 'duck':
-                    $response = Http::get('https://random-d.uk/api/random');
-                    $url = $response->object()->url;
-                    break;
-                case 'dog':
-                    $response = Http::get('https://random.dog/woof.json');
-                    $url  = $response->object()->url;
-                    break;
-                case 'fox':
-                    $response = Http::get('https://randomfox.ca/floof/');
-                    $url  = $response->object()->image;
-                    break;
-                default:
-                    abort(404);
-                    break;
-            }
+        $apis = $this->getAnimalApisArray();
+        $animal = request()->input('animal');
+        if ($animal && isset($apis[$animal])) {
+            $response = Http::get($apis[$animal]['url']);
+            $url = $response->object()->{$apis[$animal]['imageField']};
 
             $animalPicture = AnimalPicture::updateOrCreate([
                 'animal' => request()->input('animal'),
@@ -43,10 +26,27 @@ class AnimalPictureController extends Controller
             ]);
 
             return view('animals.random', ['animalPicture' => $animalPicture]);
-
         }
 
-
         return view('animals.random');
+    }
+
+    /**
+     * Returns an array of APIs used to get animal pictures.
+     * @return array[]
+     */
+    private function getAnimalApisArray()
+    {
+        return [
+            'duck' => [ 'url' => 'https://random-d.uk/api/random',
+                'imageField' => 'url',
+            ],
+            'dog'  => [ 'url' => 'https://random.dog/woof.json',
+                'imageField' => 'url',
+            ],
+            'fox'  => [ 'url' => 'https://randomfox.ca/floof/',
+                'imageField' => 'image',
+            ],
+        ];
     }
 }
